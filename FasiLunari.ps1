@@ -371,6 +371,7 @@ $C_SEL    = [System.Drawing.Color]::FromArgb( 60, 45,120)
 $C_BORDER = [System.Drawing.Color]::FromArgb( 60, 50,110)
 $C_NM     = [System.Drawing.Color]::FromArgb(190,160,255)
 $C_FQ     = [System.Drawing.Color]::FromArgb(140,210,255)
+$C_DARK   = [System.Drawing.Color]::FromArgb( 50, 50, 80)
 
 # ============================================================
 #  FONT
@@ -391,8 +392,8 @@ $F_STATUS = New-Object System.Drawing.Font('Courier New',10,[System.Drawing.Font
 # ============================================================
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Fasi Lunari  --  J. Meeus, Cap. 32'
-$form.Size            = New-Object System.Drawing.Size(1100,820)
-$form.MinimumSize     = New-Object System.Drawing.Size(900,620)
+$form.Size            = New-Object System.Drawing.Size(1400,820)
+$form.MinimumSize     = New-Object System.Drawing.Size(1100,620)
 $form.StartPosition   = 'CenterScreen'
 $form.BackColor       = $C_BG
 $form.ForeColor       = $C_FG
@@ -401,7 +402,7 @@ $form.FormBorderStyle = 'Sizable'
 # ---- Intestazione ----
 $pnlHead           = New-Object System.Windows.Forms.Panel
 $pnlHead.Location  = New-Object System.Drawing.Point(0,0)
-$pnlHead.Size      = New-Object System.Drawing.Size(1100,140)
+$pnlHead.Size      = New-Object System.Drawing.Size(1400,140)
 $pnlHead.BackColor = $C_HEADER
 $pnlHead.Anchor    = 'Top,Left,Right'
 $form.Controls.Add($pnlHead)
@@ -435,7 +436,7 @@ $pnlHead.Controls.Add($lblSym)
 
 $pnlHL = New-Object System.Windows.Forms.Panel
 $pnlHL.Location = New-Object System.Drawing.Point(0,138)
-$pnlHL.Size     = New-Object System.Drawing.Size(1100,3)
+$pnlHL.Size     = New-Object System.Drawing.Size(1400,3)
 $pnlHL.BackColor= $C_ACCENT
 $pnlHL.Anchor   = 'Top,Left,Right'
 $form.Controls.Add($pnlHL)
@@ -444,7 +445,7 @@ $form.Controls.Add($pnlHL)
 $Y_PARAM = 148
 $pnlParam           = New-Object System.Windows.Forms.Panel
 $pnlParam.Location  = New-Object System.Drawing.Point(0,$Y_PARAM)
-$pnlParam.Size      = New-Object System.Drawing.Size(1100,108)
+$pnlParam.Size      = New-Object System.Drawing.Size(1400,108)
 $pnlParam.BackColor = $C_PANEL
 $pnlParam.Anchor    = 'Top,Left,Right'
 $form.Controls.Add($pnlParam)
@@ -473,14 +474,14 @@ New-Lbl 'Anno Inizio:'   16  16 $F_LABEL $C_FG $pnlParam | Out-Null
 $txtStart = New-Txt (Get-Date).Year  152  12  90  4  $pnlParam
 New-Lbl 'Anno Fine:'    262  16 $F_LABEL $C_FG $pnlParam | Out-Null
 $txtEnd   = New-Txt (Get-Date).Year  378  12  90  4  $pnlParam
-$btnCalc   = New-Btn 'CALCOLA'      492  10  148  34 $C_ACCENT $pnlParam
-$btnExport = New-Btn 'ESPORTA CSV'  654  10  168  34 $C_BLUE   $pnlParam
-$btnPdf    = New-Btn 'ESPORTA PDF'  836  10  168  34 $C_RED    $pnlParam
-$btnPreview= New-Btn 'ANTEPRIMA'    1018 10  68   34 [System.Drawing.Color]::FromArgb(50,50,80) $pnlParam
+$btnCalc   = New-Btn 'CALCOLA'      492  10  200  34 $C_ACCENT $pnlParam
+$btnExport = New-Btn 'ESPORTA CSV'  706  10  200  34 $C_BLUE   $pnlParam
+$btnPdf    = New-Btn 'ESPORTA PDF'  920  10  200  34 $C_RED    $pnlParam
+$btnPreview= New-Btn 'ANTEPRIMA'   1134  10  220  34 $C_DARK   $pnlParam
 $btnExport.Enabled=$false; $btnPdf.Enabled=$false; $btnPreview.Enabled=$false
 
 $sep=New-Object System.Windows.Forms.Label; $sep.BackColor=$C_BORDER
-$sep.Location=New-Object System.Drawing.Point(16,52); $sep.Size=New-Object System.Drawing.Size(1060,2)
+$sep.Location=New-Object System.Drawing.Point(16,52); $sep.Size=New-Object System.Drawing.Size(1360,2)
 $pnlParam.Controls.Add($sep)
 
 New-Lbl 'Latitudine:'    16  62 $F_LABEL $C_FG $pnlParam | Out-Null
@@ -491,13 +492,13 @@ $txtLon = New-Txt '9.1859'   634  58  110  12  $pnlParam
 New-Lbl '(+ Est / - Ovest)    Es: Milano  Lat 45.4654  Lon 9.1859'  756  65 $F_STATUS $C_DIM $pnlParam | Out-Null
 
 $pnlPL=New-Object System.Windows.Forms.Panel; $pnlPL.Location=New-Object System.Drawing.Point(0,($Y_PARAM+107))
-$pnlPL.Size=New-Object System.Drawing.Size(1100,2); $pnlPL.BackColor=$C_ACCENT; $pnlPL.Anchor='Top,Left,Right'
+$pnlPL.Size=New-Object System.Drawing.Size(1400,2); $pnlPL.BackColor=$C_ACCENT; $pnlPL.Anchor='Top,Left,Right'
 $form.Controls.Add($pnlPL)
 
 # ---- Barra info ----
 $Y_INFO=($Y_PARAM+110)
 $pnlInfo=New-Object System.Windows.Forms.Panel; $pnlInfo.Location=New-Object System.Drawing.Point(0,$Y_INFO)
-$pnlInfo.Size=New-Object System.Drawing.Size(1100,32); $pnlInfo.BackColor=[System.Drawing.Color]::FromArgb(18,18,36)
+$pnlInfo.Size=New-Object System.Drawing.Size(1400,32); $pnlInfo.BackColor=[System.Drawing.Color]::FromArgb(18,18,36)
 $pnlInfo.Anchor='Top,Left,Right'; $form.Controls.Add($pnlInfo)
 $lblInfo=New-Object System.Windows.Forms.Label
 $lblInfo.Text='  UT = Tempo Universale   |   LMT = Ora Locale Media (UT + Longitudine/15h)   |   Precisione algoritmo: ~2 min'
@@ -696,5 +697,5 @@ $form.Add_KeyDown({param($s,$e)
     if($e.KeyCode -eq 'Escape'){$form.Close()}
 })
 $form.KeyPreview=$true
-$dgv.Size=New-Object System.Drawing.Size(1100,492)
+$dgv.Size=New-Object System.Drawing.Size(1400,492)
 [System.Windows.Forms.Application]::Run($form)

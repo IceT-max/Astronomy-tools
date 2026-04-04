@@ -309,7 +309,7 @@ $lv.BackColor     = [System.Drawing.Color]::FromArgb(252, 253, 255)
 $lv.BorderStyle   = [System.Windows.Forms.BorderStyle]::FixedSingle
 
 # Header nativo con stile piatto (NonFlat = testo semplice, niente pulsanti)
-$lv.HeaderStyle   = [System.Windows.Forms.ColumnHeaderStyle]::Nonflat
+$lv.HeaderStyle   = [System.Windows.Forms.ColumnHeaderStyle]::Nonclickable
 
 $lv.Location = New-Object System.Drawing.Point($xM, $yLv)
 $lv.Size     = New-Object System.Drawing.Size($wM, $hLv)
