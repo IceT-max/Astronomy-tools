@@ -1,0 +1,301 @@
+================================================================================
+  ASTRONOMICAL TOOLS SUITE
+  Project Description
+================================================================================
+
+  Language   : PowerShell 5.1
+  UI Library : System.Windows.Forms  (no external dependencies)
+  Platform   : Windows (.NET Framework 4.x or later)
+  Author     : [project author]
+  Updated    : 2025
+
+================================================================================
+  PROJECT OVERVIEW
+================================================================================
+
+This project is a suite of standalone PowerShell 5.1 graphical tools for
+astronomical calculations. Each script provides a Windows Forms interface and
+implements algorithms taken directly from peer-reviewed, published references,
+with no third-party libraries required beyond what ships with Windows.
+
+The suite covers the full chain of observational astronomy: time systems,
+coordinate transformations, solar and lunar positions, lunar phase and
+apogee/perigee events, solar and lunar eclipse predictions with local
+circumstances, and planetary conjunction searches via a live NASA web API.
+
+All scripts share the same design conventions:
+  - Requires PowerShell 5.1 (#Requires -Version 5.1)
+  - Add-Type for System.Windows.Forms and System.Drawing
+  - EnableVisualStyles() for modern rendering
+  - Arithmetic expressions pre-calculated before passing to Point/Size
+    constructors (mandatory workaround for PS 5.1 parser limitations)
+  - Pure ASCII output where displayed in fixed-width controls
+
+
+================================================================================
+  REFERENCES AND SOURCES
+================================================================================
+
+[1] Jean Meeus
+    "Astronomical Algorithms", 2nd edition
+    Willmann-Bell, Richmond VA, 1998
+    --> Primary reference for all orbital mechanics, Julian Date arithmetic,
+        sidereal time, obliquity of the ecliptic, Sun/Moon/planet positions,
+        lunar phases (Ch. 32), lunar apogee and perigee (Ch. 47, 50),
+        and eclipse theory.
+
+[2] Jean Meeus
+    "Astronomical Formulae for Calculators", 4th edition
+    Willmann-Bell, Richmond VA, 1988
+    --> Used specifically for sidereal time formulas (Ch. 7) and the
+        equatorial <-> altitude-azimuth coordinate transformation (Ch. 8),
+        and for lunar eclipse circumstances (Ch. 33).
+
+[3] Fred Espenak & Jean Meeus
+    "Five Millennium Canon of Solar Eclipses: -1999 to +3000"
+    NASA Technical Publication TP-2009-214174
+    NASA Special Publication   SP-2009-214173
+    --> Source of the Besselian elements database included as the CSV file
+        eclipse_besselian_from_mysqldump2.csv (~11,900 solar eclipses,
+        54 columns per record). Used by EclissiCalc.ps1 to compute local
+        eclipse circumstances with full Besselian element interpolation.
+
+[4] JPL Horizons Web Service -- NASA Jet Propulsion Laboratory
+    Endpoint: https://ssd.jpl.nasa.gov/api/horizons.api
+    Documentation: https://ssd-api.jpl.nasa.gov/doc/horizons.html
+    --> Real-time ephemeris service queried by Horizons-Congiunzioni.ps1
+        for observer-centric RA, Dec, magnitude, and angular diameter of
+        solar-system bodies. Requires an active Internet connection.
+
+[5] Astronomical Supplement (Explanatory Supplement to the Astronomical
+    Almanac), Chapter 9
+    --> Local solar eclipse circumstances algorithm:
+        shadow-axis position x(t), y(t) in the fundamental plane,
+        cone-axis declination d(t) and GHA mu(t), geocentric observer
+        coordinates xi, eta, zeta, and magnitude formula
+        (L1 - Delta) / (L1 + |L2|).
+
+
+================================================================================
+  SCRIPTS -- PURPOSE AND DETAILS
+================================================================================
+
+--------------------------------------------------------------------------------
+  AstroCalc.ps1
+  General Astronomical Calculator
+--------------------------------------------------------------------------------
+  Source  : Jean Meeus, "Astronomical Algorithms" (2nd ed.)
+
+  Purpose :
+    An all-in-one planetary calculator that computes positions and physical
+    data for the Sun, the Moon, and all major planets as seen from a
+    user-defined geographic location at any date and time.
+
+  Capabilities :
+    - Julian Date conversion for both Gregorian and Julian calendars
+    - Greenwich Sidereal Time (GST) and Local Sidereal Time (LST)
+    - Ecliptic obliquity for any epoch (with T^3 correction)
+    - Kepler equation solver (iterative, convergence to 1e-10 rad)
+    - True anomaly from eccentric anomaly
+    - Sun: ecliptic longitude/latitude, RA/Dec, altitude/azimuth
+    - Moon: RA/Dec, altitude/azimuth, phase angle, illuminated fraction
+    - Planets (Mercury through Neptune): heliocentric orbital elements ->
+      geocentric ecliptic -> equatorial (RA/Dec) -> local altitude/azimuth
+    - Ecliptic-to-equatorial transformation (Ecl2Equ)
+    - Altitude-azimuth calculation from hour angle (AltAz)
+    - Output formatted as h m s  and  deg ' "
+
+  Inputs  : Date (Y/M/D), UT time, observer latitude, observer longitude
+
+
+--------------------------------------------------------------------------------
+  FasiLunari.ps1
+  Lunar Phases Calculator
+--------------------------------------------------------------------------------
+  Source  : Jean Meeus, "Astronomical Algorithms", Chapter 32
+
+  Purpose :
+    Calculates the exact dates and times of the four principal lunar phases
+    -- New Moon, First Quarter, Full Moon, Last Quarter -- for any range of
+    years, together with Moon rise, transit, and set for the observer.
+
+  Capabilities :
+    - Phase times in Terrestrial Dynamical Time (TD) and Universal Time (UT)
+    - Delta-T (TD - UT) correction applied automatically
+    - Local Mean Time (LMT) display derived from observer longitude
+    - Moon rise, culmination (transit), and set times
+    - Julian Day Number for each event
+    - Multi-year search with scrollable tabular output
+    - Export to clipboard or file
+
+  Accuracy  : Phase times within ~1 minute over the range -2000 to +3000
+
+  Inputs  : Start year, end year, observer latitude, observer longitude
+
+
+--------------------------------------------------------------------------------
+  LunaApogeoPerigeo.ps1
+  Lunar Apogee and Perigee Calculator
+--------------------------------------------------------------------------------
+  Sources :
+    Jean Meeus, "Astronomical Algorithms"
+      Chapter 50 -- JDE of each apogee and perigee event
+      Chapter 47 -- Earth-Moon distance (km)
+
+  Purpose :
+    Calculates the date, time, and Earth-Moon distance for every lunar
+    apogee and perigee event within a user-specified year range.
+
+  Capabilities :
+    - Dates and times of every apogee and perigee (in UT)
+    - Earth-Moon distance in kilometres for each event
+    - Identification of "Super Moon" candidates (perigee coinciding
+      with Full Moon within a configurable tolerance)
+    - Multi-year tabular output
+
+  Accuracy  : Date/time +/- 1-2 hours  |  Distance +/- 500-1500 km
+
+  Inputs  : Start year, end year
+
+
+--------------------------------------------------------------------------------
+  EclissiCalc.ps1  (v4)
+  Solar and Lunar Eclipse Calculator
+--------------------------------------------------------------------------------
+  Sources :
+    [Solar]  Espenak & Meeus, Five Millennium Canon (NASA TP-2009-214174)
+             -> Besselian elements from eclipse_besselian_from_mysqldump2.csv
+             Explanatory Supplement, Ch. 9 -- local circumstances algorithm
+    [Lunar]  Jean Meeus, "Astronomical Formulae for Calculators", Ch. 33
+             + Moon altitude sampling over the event duration
+
+  Purpose :
+    The most comprehensive script in the suite. For solar eclipses it loads
+    Besselian elements from the CSV database and computes exact local
+    circumstances for the observer's site. For lunar eclipses it applies
+    Meeus's analytical formulas plus altitude sampling.
+
+  Solar eclipse local algorithm :
+    x(t), y(t)    -- shadow axis position in the fundamental plane
+    d(t), mu(t)   -- declination and GHA of the shadow cone axis
+    xi, eta, zeta -- geocentric observer coordinates
+    Delta         -- observer distance from the shadow axis
+    Visibility condition : Delta <= L1(t)
+    Local magnitude : (L1 - Delta) / (L1 + |L2|)
+
+  Capabilities :
+    - Search solar and/or lunar eclipses over any year range
+    - For solar: eclipse type (Total, Annular, Hybrid, Partial), local
+      contact times (C1 C2 C3 C4), local magnitude, path width, Sun Alt/Az
+    - For lunar: penumbral, partial, and total phases with altitude
+    - Saros series number and membership sequence
+    - HTML report generation (landscape A4, ready for browser printing/PDF)
+    - Results filterable by visibility at the observer's location
+
+  Inputs  : Start year, end year, observer latitude, longitude, time zone
+
+
+--------------------------------------------------------------------------------
+  Horizons-Congiunzioni.ps1
+  Planetary Conjunctions via JPL Horizons API
+--------------------------------------------------------------------------------
+  Source  : JPL Horizons Web API
+            https://ssd.jpl.nasa.gov/api/horizons.api
+            (Internet connection required)
+
+  Purpose :
+    Searches for planetary conjunctions (minimum angular separation between
+    any two solar-system bodies) visible above the horizon from the observer's
+    location, by querying the NASA JPL Horizons ephemeris service.
+
+  Bodies covered :
+    Mercury (199), Venus (299), Moon (301), Mars (499), Jupiter (599),
+    Saturn (699), Uranus (799), Neptune (899), Sun (10)
+
+  API query parameters used :
+    EPHEM_TYPE=OBSERVER, CENTER=coord@399, COORD_TYPE=GEODETIC,
+    STEP_SIZE=1h, quantities: RA/Dec, magnitude, angular diameter
+
+  Capabilities :
+    - Configurable date range, observer site (lat/lon/elevation)
+    - Selectable body pairs for conjunction search
+    - Angular separation threshold filter
+    - Altitude-above-horizon filter (objects must be visible)
+    - Results displayed in a scrollable grid with export option
+    - Cancellable background query with progress indicator
+
+  Inputs  : Start date, end date, observer lat/lon/elev, body selection,
+            max angular separation, min altitude
+
+
+--------------------------------------------------------------------------------
+  ConversioneCoordinate.ps1
+  Equatorial <-> Altitude-Azimuth Coordinate Converter
+--------------------------------------------------------------------------------
+  Sources :
+    Jean Meeus, "Astronomical Formulae for Calculators" (4th ed.)
+      Chapter 7  -- Sidereal Time
+      Chapter 8  -- Coordinate Transformation
+
+  Purpose :
+    Converts astronomical coordinates between the equatorial system
+    (Right Ascension / Declination) and the horizontal system
+    (Altitude / Azimuth) in both directions, for any date, time, and
+    geographic location.
+
+  Capabilities :
+    - RA/Dec  ->  Alt/Az  (with atmospheric refraction option)
+    - Alt/Az  ->  RA/Dec
+    - Julian Date calculation (Get-JD)
+    - Greenwich Sidereal Time and Local Sidereal Time
+    - Hour angle computation
+    - Normalisation functions Norm360 and Norm24
+    - Input validation with user-friendly error messages
+    - Results displayed in deg min sec and h m s notation
+
+  Inputs  : Date (Y/M/D), UT time, observer latitude/longitude,
+            RA + Dec  OR  Altitude + Azimuth
+
+
+================================================================================
+  DATA FILE
+================================================================================
+
+  eclipse_besselian_from_mysqldump2.csv
+  ----------------------------------------------------------------------------
+  Rows    : ~11,900  (one row per solar eclipse)
+  Columns : 54
+  Period  : -1999 to +3000
+  Origin  : Espenak & Meeus, Five Millennium Canon (NASA TP/SP 2009)
+            exported from a MySQL database dump
+
+  Key column groups :
+    Date / time   : year, month, day, td_ge (TD of greatest eclipse)
+    Identifiers   : luna_num, saros (Saros series), cat_no, canon_plate
+    Eclipse type  : eclipse_type, etype (integer code), gamma, magnitude
+    Geography     : lat_ge, lng_ge, lat_dd_ge, lng_dd_ge (greatest eclipse)
+    Path geometry : path_width (km), central_duration, duration_secs,
+                    sun_alt, sun_azm at greatest eclipse
+    Besselian     : t0, tmin, tmax (time window in hours from greatest eclipse)
+                    x0 x1 x2 x3  -- shadow axis X polynomial coefficients
+                    y0 y1 y2 y3  -- shadow axis Y polynomial coefficients
+                    d0 d1 d2     -- cone declination polynomial coefficients
+                    mu0 mu1 mu2  -- GHA polynomial coefficients
+                    l10 l11 l12  -- penumbral radius L1 polynomial coefficients
+                    l20 l21 l22  -- umbral radius   L2 polynomial coefficients
+                    tan_f1, tan_f2 -- half-angles of penumbral/umbral cones
+    Saros info    : nSer, nSeq, nJLE (Saros sequence metadata)
+    Category      : PNS, UNS, NCN  (eclipse category flags)
+    Delta-T       : dt (seconds, TD - UT at greatest eclipse)
+    Julian Date   : julian_date (JDE of greatest eclipse)
+
+  Usage :
+    Loaded at runtime by EclissiCalc.ps1. For each solar eclipse in the
+    search range, the script reads the 12 Besselian polynomial coefficients
+    and evaluates x(t), y(t), d(t), mu(t), L1(t), L2(t) at the observer's
+    site to determine local visibility, contact times, and magnitude.
+
+
+================================================================================
+  END OF PROJECT DESCRIPTION
+================================================================================
