@@ -1,0 +1,310 @@
+================================================================================
+  ASTRONOMICAL TOOLS SUITE
+  Descrizione del Progetto
+================================================================================
+
+  Linguaggio  : PowerShell 5.1
+  Libreria UI : System.Windows.Forms  (nessuna dipendenza esterna)
+  Piattaforma : Windows (.NET Framework 4.x o successivo)
+  Aggiornato  : 2025
+
+================================================================================
+  PANORAMICA DEL PROGETTO
+================================================================================
+
+Questo progetto e' una suite di strumenti grafici standalone scritti in
+PowerShell 5.1 per calcoli astronomici. Ogni script fornisce un'interfaccia
+Windows Forms e implementa algoritmi tratti direttamente da riferimenti
+bibliografici pubblicati e peer-reviewed, senza richiedere librerie di terze
+parti al di fuori di quelle gia' incluse in Windows.
+
+La suite copre l'intera catena dell'astronomia osservativa: sistemi di tempo,
+trasformazioni di coordinate, posizioni di Sole e Luna, fasi lunari ed eventi
+di apogeo/perigeo, previsioni di eclissi solari e lunari con le circostanze
+locali per l'osservatore, e ricerca di congiunzioni planetarie tramite un
+servizio web NASA attivo.
+
+Tutti gli script condividono le stesse convenzioni progettuali:
+  - Richiedono PowerShell 5.1 (#Requires -Version 5.1)
+  - Add-Type per System.Windows.Forms e System.Drawing
+  - EnableVisualStyles() per un rendering moderno
+  - Espressioni aritmetiche pre-calcolate prima di essere passate ai
+    costruttori Point/Size (workaround obbligatorio per i limiti del
+    parser di PS 5.1)
+  - Output in caratteri ASCII standard nei controlli a larghezza fissa
+
+
+================================================================================
+  RIFERIMENTI E FONTI
+================================================================================
+
+[1] Jean Meeus
+    "Astronomical Algorithms", 2a edizione
+    Willmann-Bell, Richmond VA, 1998
+    --> Riferimento principale per tutta la meccanica orbitale, l'aritmetica
+        del Giorno Giuliano, il tempo siderale, l'obliquita' dell'eclittica,
+        le posizioni di Sole/Luna/pianeti, le fasi lunari (Cap. 32),
+        l'apogeo e perigeo lunare (Cap. 47, 50) e la teoria delle eclissi.
+
+[2] Jean Meeus
+    "Astronomical Formulae for Calculators", 4a edizione
+    Willmann-Bell, Richmond VA, 1988
+    --> Utilizzato specificamente per le formule del tempo siderale (Cap. 7)
+        e la trasformazione di coordinate equatoriali <-> altazimutali
+        (Cap. 8), e per le circostanze delle eclissi lunari (Cap. 33).
+
+[3] Fred Espenak & Jean Meeus
+    "Five Millennium Canon of Solar Eclipses: -1999 to +3000"
+    NASA Technical Publication TP-2009-214174
+    NASA Special Publication   SP-2009-214173
+    --> Fonte del database degli elementi Besseliani incluso come file CSV
+        eclipse_besselian_from_mysqldump2.csv (~11.900 eclissi solari,
+        54 colonne per record). Utilizzato da EclissiCalc.ps1 per calcolare
+        le circostanze locali con piena interpolazione degli elementi
+        Besseliani.
+
+[4] JPL Horizons Web Service -- NASA Jet Propulsion Laboratory
+    Endpoint     : https://ssd.jpl.nasa.gov/api/horizons.api
+    Documentazione: https://ssd-api.jpl.nasa.gov/doc/horizons.html
+    --> Servizio di effemeridi in tempo reale interrogato da
+        Horizons-Congiunzioni.ps1 per ottenere AR, Dec, magnitudine e
+        diametro angolare dei corpi del sistema solare centrati
+        sull'osservatore. Richiede una connessione Internet attiva.
+
+[5] Explanatory Supplement to the Astronomical Almanac, Capitolo 9
+    --> Algoritmo per le circostanze locali delle eclissi solari:
+        posizione dell'asse d'ombra x(t), y(t) nel piano fondamentale,
+        declinazione d(t) e GHA mu(t) dell'asse del cono,
+        coordinate geocentriche dell'osservatore xi, eta, zeta,
+        e formula della magnitudine locale (L1 - Delta) / (L1 + |L2|).
+
+
+================================================================================
+  SCRIPT -- SCOPO E DETTAGLI
+================================================================================
+
+--------------------------------------------------------------------------------
+  AstroCalc.ps1
+  Calcolatore Astronomico Generale
+--------------------------------------------------------------------------------
+  Fonte   : Jean Meeus, "Astronomical Algorithms" (2a ed.)
+
+  Scopo   :
+    Calcolatore planetario tutto-in-uno che fornisce posizioni e dati fisici
+    per il Sole, la Luna e tutti i pianeti principali visti da una posizione
+    geografica definita dall'utente, per qualsiasi data e ora.
+
+  Funzionalita' :
+    - Conversione del Giorno Giuliano per calendari Gregoriano e Giuliano
+    - Tempo Siderale di Greenwich (GST) e Tempo Siderale Locale (LST)
+    - Obliquita' dell'eclittica per qualsiasi epoca (con correzione T^3)
+    - Solutore dell'equazione di Kepler (iterativo, convergenza a 1e-10 rad)
+    - Anomalia vera ricavata dall'anomalia eccentrica
+    - Sole: longitudine/latitudine eclittica, AR/Dec, altezza/azimut
+    - Luna: AR/Dec, altezza/azimut, angolo di fase, frazione illuminata
+    - Pianeti (da Mercurio a Nettuno): elementi orbitali eliocentrici ->
+      eclittica geocentrica -> equatoriali (AR/Dec) -> altezza/azimut locali
+    - Trasformazione eclittica -> equatoriale (Ecl2Equ)
+    - Calcolo altezza/azimut dall'angolo orario (AltAz)
+    - Output formattato in h m s  e  gradi ' "
+
+  Dati di ingresso : Data (A/M/G), ora UT, latitudine e longitudine osservatore
+
+
+--------------------------------------------------------------------------------
+  FasiLunari.ps1
+  Calcolatore delle Fasi Lunari
+--------------------------------------------------------------------------------
+  Fonte   : Jean Meeus, "Astronomical Algorithms", Capitolo 32
+
+  Scopo   :
+    Calcola le date e gli orari esatti delle quattro fasi lunari principali
+    -- Novilunio, Primo Quarto, Plenilunio, Ultimo Quarto -- per qualsiasi
+    intervallo di anni, insieme ad alba, transito e tramonto della Luna per
+    il sito dell'osservatore.
+
+  Funzionalita' :
+    - Orari delle fasi in Tempo Dinamico Terrestre (TD) e Tempo Universale (UT)
+    - Correzione Delta-T (TD - UT) applicata automaticamente
+    - Ora Media Locale (LMT) ricavata dalla longitudine dell'osservatore
+    - Orari di alba, culminazione (transito) e tramonto della Luna
+    - Numero del Giorno Giuliano per ogni evento
+    - Ricerca multi-anno con output tabulare scorrevole
+    - Esportazione negli appunti o su file
+
+  Precisione : Orari delle fasi entro ~1 minuto nell'intervallo -2000/+3000
+
+  Dati di ingresso : Anno inizio, anno fine, latitudine e longitudine osservatore
+
+
+--------------------------------------------------------------------------------
+  LunaApogeoPerigeo.ps1
+  Calcolatore di Apogeo e Perigeo Lunare
+--------------------------------------------------------------------------------
+  Fonti   :
+    Jean Meeus, "Astronomical Algorithms"
+      Capitolo 50 -- GDE di ogni evento di apogeo e perigeo
+      Capitolo 47 -- distanza Terra-Luna (km)
+
+  Scopo   :
+    Calcola data, ora e distanza Terra-Luna per ogni evento di apogeo e
+    perigeo lunare nell'intervallo di anni indicato dall'utente.
+
+  Funzionalita' :
+    - Date e orari di ogni apogeo e perigeo (in UT)
+    - Distanza Terra-Luna in chilometri per ogni evento
+    - Identificazione delle "Super Luna" (perigeo in coincidenza con
+      Plenilunio entro una tolleranza configurabile)
+    - Output tabulare multi-anno
+
+  Precisione  : Data/ora +/- 1-2 ore  |  Distanza +/- 500-1500 km
+
+  Dati di ingresso : Anno inizio, anno fine
+
+
+--------------------------------------------------------------------------------
+  EclissiCalc.ps1  (v4)
+  Calcolatore di Eclissi Solari e Lunari
+--------------------------------------------------------------------------------
+  Fonti   :
+    [Solari]  Espenak & Meeus, Five Millennium Canon (NASA TP-2009-214174)
+              -> elementi Besseliani da eclipse_besselian_from_mysqldump2.csv
+              Explanatory Supplement, Cap. 9 -- algoritmo circostanze locali
+    [Lunari]  Jean Meeus, "Astronomical Formulae for Calculators", Cap. 33
+              + campionamento dell'altitudine della Luna durante l'evento
+
+  Scopo   :
+    Lo script piu' completo della suite. Per le eclissi solari carica gli
+    elementi Besseliani dal database CSV e calcola le circostanze locali
+    esatte per il sito dell'osservatore. Per le eclissi lunari applica le
+    formule analitiche di Meeus con campionamento dell'altitudine.
+
+  Algoritmo locale per eclissi solari :
+    x(t), y(t)    -- posizione asse d'ombra nel piano fondamentale
+    d(t), mu(t)   -- declinazione e GHA dell'asse del cono d'ombra
+    xi, eta, zeta -- coordinate geocentriche dell'osservatore
+    Delta         -- distanza dell'osservatore dall'asse d'ombra
+    Condizione di visibilita' : Delta <= L1(t)
+    Magnitudine locale : (L1 - Delta) / (L1 + |L2|)
+
+  Funzionalita' :
+    - Ricerca eclissi solari e/o lunari su qualsiasi intervallo di anni
+    - Solari: tipo (Totale, Anulare, Ibrida, Parziale), orari dei contatti
+      locali (C1 C2 C3 C4), magnitudine locale, larghezza del percorso,
+      altezza/azimut del Sole
+    - Lunari: fasi penombrale, parziale e totale con altitudine della Luna
+    - Numero della serie di Saros e posizione nella sequenza
+    - Generazione di report HTML (A4 orizzontale, pronto per la stampa/PDF
+      da browser)
+    - Risultati filtrabili per visibilita' dal sito dell'osservatore
+
+  Dati di ingresso : Anno inizio, anno fine, latitudine/longitudine/fuso
+                     orario dell'osservatore
+
+
+--------------------------------------------------------------------------------
+  Horizons-Congiunzioni.ps1
+  Ricerca Congiunzioni Planetarie via API JPL Horizons
+--------------------------------------------------------------------------------
+  Fonte   : JPL Horizons Web API
+            https://ssd.jpl.nasa.gov/api/horizons.api
+            (connessione Internet obbligatoria)
+
+  Scopo   :
+    Ricerca congiunzioni planetarie (minima separazione angolare tra due
+    corpi del sistema solare) visibili sopra l'orizzonte dal sito
+    dell'osservatore, interrogando il servizio di effemeridi JPL Horizons
+    della NASA.
+
+  Corpi coperti :
+    Mercurio (199), Venere (299), Luna (301), Marte (499), Giove (599),
+    Saturno (699), Urano (799), Nettuno (899), Sole (10)
+
+  Parametri di query API utilizzati :
+    EPHEM_TYPE=OBSERVER, CENTER=coord@399, COORD_TYPE=GEODETIC,
+    STEP_SIZE=1h, quantita': AR/Dec, magnitudine, diametro angolare
+
+  Funzionalita' :
+    - Intervallo di date configurabile, sito osservatore (lat/lon/quota)
+    - Selezione delle coppie di corpi per la ricerca di congiunzioni
+    - Filtro sulla soglia di separazione angolare massima
+    - Filtro sull'altezza minima sull'orizzonte (oggetti devono essere visibili)
+    - Risultati in griglia scorrevole con opzione di esportazione
+    - Query in background annullabile con indicatore di avanzamento
+
+  Dati di ingresso : Data inizio/fine, lat/lon/quota osservatore, selezione
+                     corpi, separazione angolare massima, altitudine minima
+
+
+--------------------------------------------------------------------------------
+  ConversioneCoordinate.ps1
+  Convertitore di Coordinate Equatoriali <-> Altazimutali
+--------------------------------------------------------------------------------
+  Fonti   :
+    Jean Meeus, "Astronomical Formulae for Calculators" (4a ed.)
+      Capitolo 7  -- Tempo Siderale
+      Capitolo 8  -- Trasformazione di Coordinate
+
+  Scopo   :
+    Converte le coordinate astronomiche tra il sistema equatoriale
+    (Ascensione Retta / Declinazione) e il sistema orizzontale
+    (Altezza / Azimut) in entrambe le direzioni, per qualsiasi data, ora
+    e posizione geografica.
+
+  Funzionalita' :
+    - AR/Dec  ->  Altezza/Azimut  (con opzione di rifrazione atmosferica)
+    - Altezza/Azimut  ->  AR/Dec
+    - Calcolo del Giorno Giuliano (Get-JD)
+    - Tempo Siderale di Greenwich e Locale
+    - Calcolo dell'angolo orario
+    - Funzioni di normalizzazione Norm360 e Norm24
+    - Validazione degli input con messaggi di errore comprensibili
+    - Risultati visualizzati in gradi min sec e h m s
+
+  Dati di ingresso : Data (A/M/G), ora UT, latitudine/longitudine osservatore,
+                     AR + Dec  OPPURE  Altezza + Azimut
+
+
+================================================================================
+  FILE DI DATI
+================================================================================
+
+  eclipse_besselian_from_mysqldump2.csv
+  ----------------------------------------------------------------------------
+  Righe    : ~11.900  (una riga per eclissi solare)
+  Colonne  : 54
+  Periodo  : dal -1999 al +3000
+  Origine  : Espenak & Meeus, Five Millennium Canon (NASA TP/SP 2009)
+             esportato da un dump MySQL
+
+  Gruppi principali di colonne :
+    Data / ora      : year, month, day, td_ge (TD della massima eclissi)
+    Identificatori  : luna_num, saros (serie di Saros), cat_no, canon_plate
+    Tipo eclissi    : eclipse_type, etype (codice intero), gamma, magnitude
+    Geografia       : lat_ge, lng_ge, lat_dd_ge, lng_dd_ge (massima eclissi)
+    Geometria       : path_width (km), central_duration, duration_secs,
+                      sun_alt, sun_azm alla massima eclissi
+    Besseliani      : t0, tmin, tmax (finestra temporale in ore dalla massima)
+                      x0 x1 x2 x3  -- coefficienti polinomiali asse X ombra
+                      y0 y1 y2 y3  -- coefficienti polinomiali asse Y ombra
+                      d0 d1 d2     -- coefficienti polinomiali declinazione cono
+                      mu0 mu1 mu2  -- coefficienti polinomiali GHA
+                      l10 l11 l12  -- coeff. raggio penombra L1
+                      l20 l21 l22  -- coeff. raggio ombra   L2
+                      tan_f1, tan_f2 -- semi-angoli al vertice dei coni
+    Info Saros      : nSer, nSeq, nJLE (metadati di sequenza Saros)
+    Categorie       : PNS, UNS, NCN  (flag di categoria eclissi)
+    Delta-T         : dt (secondi, TD - UT alla massima eclissi)
+    Giorno Giuliano : julian_date (GDE della massima eclissi)
+
+  Utilizzo :
+    Caricato a runtime da EclissiCalc.ps1. Per ogni eclissi solare
+    nell'intervallo di ricerca, lo script legge i 12 coefficienti polinomiali
+    Besseliani e valuta x(t), y(t), d(t), mu(t), L1(t), L2(t) al sito
+    dell'osservatore per determinare visibilita' locale, orari dei contatti
+    e magnitudine.
+
+
+================================================================================
+  FINE DELLA DESCRIZIONE DEL PROGETTO
+================================================================================
